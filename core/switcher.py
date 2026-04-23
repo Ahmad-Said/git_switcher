@@ -63,6 +63,7 @@ class ProfileSwitcher:
                 ok, msg = self.desktop.backup_config(current_name)
                 if not ok:
                     return SwitchResult(False, f"Backup failed: {msg}")
+                self.desktop.backup_credentials(current_name)
 
         notify(SwitchStep.UPDATING_GIT, f"{target.git_name} <{target.git_email}>")
         if not self.git.set_user(target.git_name, target.git_email):
@@ -74,6 +75,7 @@ class ProfileSwitcher:
                 ok, msg = self.desktop.restore_config(target_name)
                 if not ok:
                     return SwitchResult(False, f"Restore failed: {msg}")
+                self.desktop.restore_credentials(target_name)
             else:
                 notify(SwitchStep.RESTORING, f"No backup for '{target_name}', skipping")
 

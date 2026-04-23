@@ -36,6 +36,10 @@ def get_app_config_file() -> Path:
     return get_app_config_dir() / "profiles.json"
 
 
+def get_profile_credentials_file(profile_name: str) -> Path:
+    return get_app_config_dir() / f"{profile_name}.credentials.json"
+
+
 def get_github_desktop_exe() -> Path:
     return get_appdata_local() / "GitHubDesktop" / "GitHubDesktop.exe"
 
