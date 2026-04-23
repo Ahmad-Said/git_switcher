@@ -7,6 +7,32 @@ Inspired by a bash script that required Git Bash — this app replaces it with a
 
 ---
 
+## Install (one command, no admin required)
+
+Open **PowerShell** (Win + R → `powershell`) and run:
+
+```powershell
+irm https://raw.githubusercontent.com/Ahmad-Said/git_switcher/main/install.ps1 | iex
+```
+
+The script will:
+
+1. Fetch the latest release from GitHub
+2. Download the `.exe` to a temp file
+3. Install it to `%LOCALAPPDATA%\GitSwitcher\GitSwitcher.exe`
+4. Register it in the user App Paths registry key (no admin needed)
+5. Create a **Start Menu** shortcut
+6. Optionally create a **Desktop** shortcut (asked interactively)
+
+Run the same command at any time to update to the latest version.
+
+> **Tip:** If you see a script-execution error, run this first once:
+> ```powershell
+> Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
+
+---
+
 ## What it does
 
 Each **profile** pairs a git identity (`user.name` + `user.email`) with a GitHub Desktop configuration folder. Switching
@@ -89,7 +115,8 @@ copy the current `GitHub Desktop` folder as the backup for that profile on first
 
 ```
 git_switcher/
-├── main.py                   # Entry point
+├── main.py                   # Entry point (also updater-mode dispatcher)
+├── install.ps1               # One-command user installer (hosted on GitHub)
 ├── requirements.txt
 ├── build.spec                # PyInstaller spec (one-file, no console)
 │
@@ -97,17 +124,33 @@ git_switcher/
 │   ├── config.py             # Profile & AppSettings dataclasses, JSON persistence
 │   ├── git_manager.py        # Read / write git global config
 │   ├── github_desktop.py     # Kill, backup, restore, launch GitHub Desktop
-│   └── switcher.py           # Switch orchestration with progress callbacks
+│   ├── switcher.py           # Switch orchestration with progress callbacks
+│   └── updater.py            # Self-update logic (download, apply, cleanup)
 │
 ├── ui/
 │   ├── app.py                # Main window (customtkinter)
 │   ├── profile_card.py       # Per-profile card widget
 │   ├── profile_dialog.py     # Add / edit profile dialog
-│   └── settings_dialog.py    # Appearance & integration settings
+│   ├── settings_dialog.py    # Appearance & integration settings
+│   └── update_dialog.py      # Check-for-updates dialog
 │
 └── utils/
     └── paths.py              # Windows path resolution (%APPDATA%, %LOCALAPPDATA%)
 ```
+
+---
+
+## Self-update
+
+The app checks for updates from **Help → Check for Updates**.  
+When a new version is available it downloads the new `.exe` and applies it without needing a separate installer:
+
+1. The new exe is launched in the background with a hidden `--apply-update` flag.
+2. It waits (via Win32 `OpenProcess`) for the running app to exit.
+3. It atomically replaces the installed exe (with retries for AV/file-lock tolerance).
+4. It relaunches the freshly-installed exe.
+
+A diagnostic log is written to `%TEMP%\GitSwitcher_update.log` if anything goes wrong.
 
 ---
 
