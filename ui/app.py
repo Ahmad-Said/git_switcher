@@ -8,6 +8,7 @@ from core.config import ConfigManager
 from core.git_manager import GitManager
 from core.github_desktop import GitHubDesktopManager
 from core.switcher import ProfileSwitcher, SwitchStep
+from ui.about_dialog import AboutDialog
 from ui.profile_card import ProfileCard
 from ui.profile_dialog import ProfileDialog
 from ui.settings_dialog import SettingsDialog
@@ -143,7 +144,22 @@ class GitSwitcherApp(ctk.CTk):
             hover_color=("gray82", "gray28"),
             command=self._on_settings,
         )
-        self._settings_btn.pack(side="left")
+        self._settings_btn.pack(side="left", padx=(0, 6))
+
+        self._about_btn = ctk.CTkButton(
+            btn_right,
+            text="?",
+            width=32,
+            height=32,
+            fg_color="transparent",
+            border_width=1,
+            border_color=("gray55", "gray45"),
+            text_color=("gray15", "gray85"),
+            hover_color=("gray82", "gray28"),
+            font=ctk.CTkFont(size=14, weight="bold"),
+            command=self._on_about,
+        )
+        self._about_btn.pack(side="left")
 
     def _build_profile_list(self):
         self._scroll = ctk.CTkScrollableFrame(self, corner_radius=0)
@@ -271,6 +287,10 @@ class GitSwitcherApp(ctk.CTk):
         self.wait_window(dialog)
         self._refresh()
 
+    def _on_about(self):
+        dialog = AboutDialog(self)
+        self.wait_window(dialog)
+
     # ── Helpers ───────────────────────────────────────────────────
 
     def _set_status(self, message: str, color="gray"):
@@ -281,5 +301,6 @@ class GitSwitcherApp(ctk.CTk):
         self._add_btn.configure(state=state)
         self._refresh_btn.configure(state=state)
         self._settings_btn.configure(state=state)
+        self._about_btn.configure(state=state)
         for card in self._cards.values():
             card.set_enabled(enabled)
