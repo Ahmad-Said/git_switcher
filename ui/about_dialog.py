@@ -1,8 +1,11 @@
+import webbrowser
 import customtkinter as ctk
 from PIL import Image
 
 from utils.paths import get_asset, get_app_config_file, get_appdata_roaming
 from version import __version__
+
+REPO_URL = "https://github.com/Ahmad-Said/git_switcher"
 
 
 # ── Reusable section primitives ───────────────────────────────────────────────
@@ -247,6 +250,21 @@ class AboutDialog(ctk.CTkToplevel):
             text_color=("#1a5fa8", "#4a9eff"),
             anchor="w",
         ).pack(side="left")
+
+        # GitHub repo link row
+        link_frame = ctk.CTkFrame(frame, fg_color="transparent")
+        link_frame.grid(row=2, column=1, sticky="nw", padx=(0, 20), pady=(0, 10))
+
+        link_label = ctk.CTkLabel(
+            link_frame,
+            text=f"🔗  {REPO_URL}",
+            font=ctk.CTkFont(size=11),
+            text_color=("#1a5fa8", "#4a9eff"),
+            anchor="w",
+            cursor="hand2",
+        )
+        link_label.pack(side="left")
+        link_label.bind("<Button-1>", lambda _e: webbrowser.open(REPO_URL))
 
     # ── Scrollable content ────────────────────────────────────────
 
