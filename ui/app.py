@@ -34,7 +34,6 @@ class GitSwitcherApp(ctk.CTk):
         self._setup_window()
         self._build_ui()
         self._refresh()
-        # Silent update check after the window is fully drawn
         self.after(2000, self._background_update_check)
 
     # ── Window setup ──────────────────────────────────────────────
@@ -44,27 +43,26 @@ class GitSwitcherApp(ctk.CTk):
         self.geometry(f"{self._WIDTH}x{self._HEIGHT}")
         self.minsize(420, 500)
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(2, weight=1)
+        self.grid_rowconfigure(3, weight=1)   # row 3 = profile list
 
         ico = get_asset("icon.ico")
         if ico.exists():
-            # after() avoids a race with customtkinter's own icon setup
             self.after(201, lambda: self.iconbitmap(str(ico)))
 
     # ── UI construction ───────────────────────────────────────────
 
     def _build_ui(self):
-        self._build_header()
-        self._build_toolbar()
-        self._build_profile_list()
-        self._build_statusbar()
+        self._build_header()         # row 0
+        self._build_update_banner()  # row 1 — hidden until an update is found
+        self._build_toolbar()        # row 2
+        self._build_profile_list()   # row 3
+        self._build_statusbar()      # row 4
 
     def _build_header(self):
         frame = ctk.CTkFrame(self, corner_radius=0, fg_color=("gray90", "gray17"))
         frame.grid(row=0, column=0, sticky="ew")
         frame.grid_columnconfigure(1, weight=1)
 
-        # Logo
         logo_path = get_asset("logo_96.png")
         if logo_path.exists():
             img = ctk.CTkImage(
@@ -104,9 +102,55 @@ class GitSwitcherApp(ctk.CTk):
         )
         self._profile_label.grid(row=2, column=text_col, padx=(0, 20), pady=(0, 14), sticky="w")
 
+    def _build_update_banner(self):
+        self._banner = ctk.CTkFrame(
+            self,
+            height=38,
+            corner_radius=0,
+            fg_color=("#1a5fa8", "#1a4a8a"),
+        )
+        self._banner.grid(row=1, column=0, sticky="ew")
+        self._banner.grid_propagate(False)
+        self._banner.grid_columnconfigure(0, weight=1)
+        self._banner.grid_remove()   # hidden until an update is detected
+
+        self._banner_label = ctk.CTkLabel(
+            self._banner,
+            text="",
+            font=ctk.CTkFont(size=12),
+            text_color="white",
+            anchor="w",
+        )
+        self._banner_label.grid(row=0, column=0, padx=14, sticky="w")
+
+        install_btn = ctk.CTkButton(
+            self._banner,
+            text="Install Now",
+            width=90,
+            height=26,
+            font=ctk.CTkFont(size=11),
+            fg_color="white",
+            text_color=("#1a5fa8", "#1a4a8a"),
+            hover_color=("#e0ecff", "#c0d8ff"),
+            command=self._on_updates,
+        )
+        install_btn.grid(row=0, column=1, padx=(0, 6))
+
+        ctk.CTkButton(
+            self._banner,
+            text="✕",
+            width=26,
+            height=26,
+            font=ctk.CTkFont(size=12),
+            fg_color="transparent",
+            text_color="white",
+            hover_color=("#2272c3", "#2560a8"),
+            command=self._dismiss_banner,
+        ).grid(row=0, column=2, padx=(0, 8))
+
     def _build_toolbar(self):
         frame = ctk.CTkFrame(self, fg_color="transparent")
-        frame.grid(row=1, column=0, sticky="ew", padx=15, pady=(10, 4))
+        frame.grid(row=2, column=0, sticky="ew", padx=15, pady=(10, 4))
         frame.grid_columnconfigure(1, weight=1)
 
         self._add_btn = ctk.CTkButton(
@@ -150,20 +194,6 @@ class GitSwitcherApp(ctk.CTk):
         )
         self._settings_btn.pack(side="left", padx=(0, 6))
 
-        self._update_btn = ctk.CTkButton(
-            btn_right,
-            text="↓ Updates",
-            width=90,
-            height=32,
-            fg_color="transparent",
-            border_width=1,
-            border_color=("gray55", "gray45"),
-            text_color=("gray15", "gray85"),
-            hover_color=("gray82", "gray28"),
-            command=self._on_updates,
-        )
-        self._update_btn.pack(side="left", padx=(0, 6))
-
         self._about_btn = ctk.CTkButton(
             btn_right,
             text="?",
@@ -181,12 +211,12 @@ class GitSwitcherApp(ctk.CTk):
 
     def _build_profile_list(self):
         self._scroll = ctk.CTkScrollableFrame(self, corner_radius=0)
-        self._scroll.grid(row=2, column=0, sticky="nsew", padx=15, pady=6)
+        self._scroll.grid(row=3, column=0, sticky="nsew", padx=15, pady=6)
         self._scroll.grid_columnconfigure(0, weight=1)
 
     def _build_statusbar(self):
         frame = ctk.CTkFrame(self, height=32, corner_radius=0, fg_color=("gray88", "gray18"))
-        frame.grid(row=3, column=0, sticky="ew")
+        frame.grid(row=4, column=0, sticky="ew")
         frame.grid_propagate(False)
         frame.grid_columnconfigure(0, weight=1)
 
@@ -313,27 +343,24 @@ class GitSwitcherApp(ctk.CTk):
         dialog = UpdateDialog(self)
         self.wait_window(dialog)
 
+    # ── Update check ──────────────────────────────────────────────
+
     def _background_update_check(self):
-        """Check for a newer release silently; highlight the button if found."""
-        import threading
         from core.updater import fetch_latest_release, is_newer
 
         def worker():
             release, error = fetch_latest_release()
             if release and is_newer(release) and not error:
-                self.after(0, lambda: self._mark_update_available(release.tag))
+                self.after(0, lambda: self._show_update_banner(release.tag))
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _mark_update_available(self, tag: str):
-        self._update_btn.configure(
-            text=f"↓ {tag}",
-            fg_color=("#1a5fa8", "#1a4a8a"),
-            text_color="white",
-            border_width=0,
-            hover_color=("#1550a0", "#2060b0"),
-        )
-        self._set_status(f"Update {tag} available — click '↓ {tag}' to install", ("#1a5fa8", "#4a9eff"))
+    def _show_update_banner(self, tag: str):
+        self._banner_label.configure(text=f"  Update {tag} is available")
+        self._banner.grid()
+
+    def _dismiss_banner(self):
+        self._banner.grid_remove()
 
     # ── Helpers ───────────────────────────────────────────────────
 
@@ -345,7 +372,6 @@ class GitSwitcherApp(ctk.CTk):
         self._add_btn.configure(state=state)
         self._refresh_btn.configure(state=state)
         self._settings_btn.configure(state=state)
-        self._update_btn.configure(state=state)
         self._about_btn.configure(state=state)
         for card in self._cards.values():
             card.set_enabled(enabled)

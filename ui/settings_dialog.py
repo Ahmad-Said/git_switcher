@@ -2,20 +2,20 @@ import customtkinter as ctk
 
 from core.config import AppSettings, ConfigManager
 from utils.paths import is_github_desktop_installed
+from version import __version__
 
 
 class SettingsDialog(ctk.CTkToplevel):
     def __init__(self, parent, config: ConfigManager):
         super().__init__(parent)
         self.title("Settings")
-        self.geometry("400x320")
+        self.geometry("400x420")
         self.resizable(False, False)
         self.grab_set()
         self.lift()
         self.focus_force()
 
         self._config = config
-        self._changed = False
         self._build(config.settings)
         self.bind("<Escape>", lambda _e: self.destroy())
 
@@ -41,8 +41,9 @@ class SettingsDialog(ctk.CTkToplevel):
         ).grid(row=2, column=0, sticky="w", padx=24)
 
         # ── GitHub Desktop ────────────────────────────────────────
-        separator = ctk.CTkFrame(self, height=1, fg_color=("gray80", "gray30"))
-        separator.grid(row=3, column=0, sticky="ew", padx=24, pady=(18, 14))
+        ctk.CTkFrame(self, height=1, fg_color=("gray80", "gray30")).grid(
+            row=3, column=0, sticky="ew", padx=24, pady=(18, 14)
+        )
 
         ghd_label = "GitHub Desktop Integration"
         if not is_github_desktop_installed():
@@ -68,9 +69,34 @@ class SettingsDialog(ctk.CTkToplevel):
         if not s.use_github_desktop:
             self._launch_cb.configure(state="disabled")
 
-        # ── Buttons ───────────────────────────────────────────────
+        # ── Updates ───────────────────────────────────────────────
+        ctk.CTkFrame(self, height=1, fg_color=("gray80", "gray30")).grid(
+            row=6, column=0, sticky="ew", padx=24, pady=(8, 14)
+        )
+
+        update_row = ctk.CTkFrame(self, fg_color="transparent")
+        update_row.grid(row=7, column=0, sticky="ew", padx=24, pady=(0, 4))
+        update_row.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(
+            update_row,
+            text=f"Version  v{__version__}",
+            font=ctk.CTkFont(size=12),
+            anchor="w",
+        ).grid(row=0, column=0, sticky="w")
+
+        ctk.CTkButton(
+            update_row,
+            text="Check for Updates",
+            width=150,
+            height=30,
+            font=ctk.CTkFont(size=11),
+            command=self._on_check_updates,
+        ).grid(row=0, column=1, sticky="e")
+
+        # ── Save / Cancel ─────────────────────────────────────────
         btn_frame = ctk.CTkFrame(self, fg_color="transparent")
-        btn_frame.grid(row=6, column=0, pady=(14, 18))
+        btn_frame.grid(row=8, column=0, pady=(14, 18))
 
         ctk.CTkButton(
             btn_frame, text="Cancel", width=110, height=34,
@@ -92,6 +118,14 @@ class SettingsDialog(ctk.CTkToplevel):
         state = "normal" if self._use_ghd_var.get() else "disabled"
         self._launch_cb.configure(state=state)
 
+    def _on_check_updates(self):
+        # Import here to avoid circular imports at module load time
+        from ui.update_dialog import UpdateDialog
+        # Release grab so the update dialog can take focus properly
+        self.grab_release()
+        self.destroy()
+        UpdateDialog(self.master)
+
     def _on_save(self):
         new_settings = AppSettings(
             use_github_desktop=self._use_ghd_var.get(),
@@ -99,5 +133,4 @@ class SettingsDialog(ctk.CTkToplevel):
             appearance_mode=self._appearance_var.get(),
         )
         self._config.update_settings(new_settings)
-        self._changed = True
         self.destroy()
