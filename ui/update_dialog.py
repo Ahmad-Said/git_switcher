@@ -258,15 +258,26 @@ class UpdateDialog(ctk.CTkToplevel):
             self._close_btn.configure(state="normal")
             return
 
-        # Update applied — exit so the batch script can replace the exe
+        # Update applied — exit so the updater helper can replace the exe.
+        # We close Tk cleanly; the helper uses OpenProcess() to detect exit,
+        # so it will proceed as soon as this process is gone.
         self._progress_label.configure(
             text="Update ready. Restarting...",
             text_color=("#2d7a4a", "#4caf7d"),
         )
-        # os._exit() is required here — sys.exit() raises SystemExit which
-        # tkinter's event loop swallows, leaving the process alive and the
-        # waiting batch script stuck. os._exit() kills the process immediately.
-        self.after(1200, lambda: os._exit(0))
+
+        def _quit():
+            try:
+                root = self.winfo_toplevel().master or self.master
+                if root is not None:
+                    root.quit()
+                    root.destroy()
+            except Exception:
+                pass
+            # Fallback in case Tk didn't tear down (should be rare now).
+            os._exit(0)
+
+        self.after(1200, _quit)
 
     # ── Close ─────────────────────────────────────────────────────
 
