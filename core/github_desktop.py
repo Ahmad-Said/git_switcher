@@ -1,7 +1,10 @@
 import shutil
 import subprocess
+import sys
 import time
 from typing import Tuple
+
+_NO_WINDOW = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 from utils.paths import (
     get_github_desktop_config_dir,
@@ -17,6 +20,7 @@ class GitHubDesktopManager:
             subprocess.run(
                 ["taskkill", "/F", "/FI", "IMAGENAME eq GitHubDesktop.exe"],
                 capture_output=True, timeout=10,
+                creationflags=_NO_WINDOW,
             )
             time.sleep(1)
             return True
@@ -72,6 +76,7 @@ class GitHubDesktopManager:
             result = subprocess.run(
                 ["tasklist", "/FI", "IMAGENAME eq GitHubDesktop.exe"],
                 capture_output=True, text=True, timeout=5,
+                creationflags=_NO_WINDOW,
             )
             return "GitHubDesktop.exe" in result.stdout
         except Exception:
