@@ -2,6 +2,7 @@ import threading
 from typing import Optional
 
 import customtkinter as ctk
+from PIL import Image
 
 from core.config import ConfigManager
 from core.git_manager import GitManager
@@ -10,11 +11,12 @@ from core.switcher import ProfileSwitcher, SwitchStep
 from ui.profile_card import ProfileCard
 from ui.profile_dialog import ProfileDialog
 from ui.settings_dialog import SettingsDialog
+from utils.paths import get_asset
 
 
 class GitSwitcherApp(ctk.CTk):
-    _WIDTH = 500
-    _HEIGHT = 620
+    _WIDTH = 520
+    _HEIGHT = 630
 
     def __init__(self):
         super().__init__()
@@ -39,6 +41,11 @@ class GitSwitcherApp(ctk.CTk):
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(2, weight=1)
 
+        ico = get_asset("icon.ico")
+        if ico.exists():
+            # after() avoids a race with customtkinter's own icon setup
+            self.after(201, lambda: self.iconbitmap(str(ico)))
+
     # ── UI construction ───────────────────────────────────────────
 
     def _build_ui(self):
@@ -50,14 +57,29 @@ class GitSwitcherApp(ctk.CTk):
     def _build_header(self):
         frame = ctk.CTkFrame(self, corner_radius=0, fg_color=("gray90", "gray17"))
         frame.grid(row=0, column=0, sticky="ew")
-        frame.grid_columnconfigure(0, weight=1)
+        frame.grid_columnconfigure(1, weight=1)
+
+        # Logo
+        logo_path = get_asset("logo_96.png")
+        if logo_path.exists():
+            img = ctk.CTkImage(
+                light_image=Image.open(logo_path),
+                dark_image=Image.open(logo_path),
+                size=(56, 56),
+            )
+            ctk.CTkLabel(frame, image=img, text="").grid(
+                row=0, column=0, rowspan=3, padx=(16, 10), pady=12, sticky="w"
+            )
+            text_col = 1
+        else:
+            text_col = 0
 
         ctk.CTkLabel(
             frame,
             text="Git Profile Switcher",
             font=ctk.CTkFont(size=20, weight="bold"),
             anchor="w",
-        ).grid(row=0, column=0, padx=20, pady=(16, 3), sticky="w")
+        ).grid(row=0, column=text_col, padx=(0, 20), pady=(14, 2), sticky="w")
 
         self._user_label = ctk.CTkLabel(
             frame,
@@ -66,7 +88,7 @@ class GitSwitcherApp(ctk.CTk):
             text_color=("gray45", "gray65"),
             anchor="w",
         )
-        self._user_label.grid(row=1, column=0, padx=20, pady=(0, 4), sticky="w")
+        self._user_label.grid(row=1, column=text_col, padx=(0, 20), pady=(0, 2), sticky="w")
 
         self._profile_label = ctk.CTkLabel(
             frame,
@@ -75,7 +97,7 @@ class GitSwitcherApp(ctk.CTk):
             text_color=("gray55", "gray55"),
             anchor="w",
         )
-        self._profile_label.grid(row=2, column=0, padx=20, pady=(0, 14), sticky="w")
+        self._profile_label.grid(row=2, column=text_col, padx=(0, 20), pady=(0, 14), sticky="w")
 
     def _build_toolbar(self):
         frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -149,9 +171,7 @@ class GitSwitcherApp(ctk.CTk):
             self._user_label.configure(text="No git user configured")
 
         if self._current_profile:
-            self._profile_label.configure(
-                text=f"Active profile: {self._current_profile}"
-            )
+            self._profile_label.configure(text=f"Active profile: {self._current_profile}")
         else:
             self._profile_label.configure(text="Active profile: (unknown)")
 

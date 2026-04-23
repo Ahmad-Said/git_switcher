@@ -10,11 +10,14 @@ block_cipher = None
 # Collect customtkinter assets (themes, images, fonts)
 ctk_datas = collect_data_files("customtkinter")
 
+# Bundle our own assets folder
+app_assets = [("assets", "assets")]
+
 a = Analysis(
     ["main.py"],
     pathex=[str(Path(".").resolve())],
     binaries=[],
-    datas=ctk_datas,
+    datas=ctk_datas + app_assets,
     hiddenimports=[
         "customtkinter",
         "PIL",
@@ -54,5 +57,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,              # Set to "assets/icon.ico" if you add one
+    icon="assets/icon.ico",
 )

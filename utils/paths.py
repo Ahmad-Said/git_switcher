@@ -1,5 +1,15 @@
 import os
+import sys
 from pathlib import Path
+
+
+def get_asset(filename: str) -> Path:
+    """Resolve a path inside assets/, works both from source and PyInstaller bundle."""
+    if getattr(sys, "frozen", False):
+        base = Path(sys._MEIPASS)
+    else:
+        base = Path(__file__).parent.parent
+    return base / "assets" / filename
 
 
 def get_appdata_roaming() -> Path:
