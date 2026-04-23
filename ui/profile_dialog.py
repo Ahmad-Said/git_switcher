@@ -3,6 +3,7 @@ from typing import Optional
 
 from core.config import Profile
 from core.git_manager import GitManager
+from ui.async_utils import ButtonBusy, run_async
 
 
 class ProfileDialog(ctk.CTkToplevel):
@@ -103,22 +104,34 @@ class ProfileDialog(ctk.CTkToplevel):
             self._git_email_entry.insert(0, profile.git_email)
 
     def _autofill(self):
-        git_name, git_email = GitManager.get_current_user()
-        if not git_name and not git_email:
-            self._error_label.configure(text="No git config found — run: git config --global user.name / user.email")
-            return
+        # Read git config on a worker thread — it spawns subprocesses and
+        # can briefly stutter the UI on slow machines.
+        busy = ButtonBusy(self._autofill_btn, "Reading")
 
-        self._error_label.configure(text="")
-        self._git_name_entry.delete(0, "end")
-        self._git_email_entry.delete(0, "end")
-        if git_name:
-            self._git_name_entry.insert(0, git_name)
-        if git_email:
-            self._git_email_entry.insert(0, git_email)
+        def task():
+            return GitManager.get_current_user()
 
-        # Brief visual confirmation on the button
-        self._autofill_btn.configure(text="Filled!")
-        self.after(1500, lambda: self._autofill_btn.configure(text="Fill from current git config"))
+        def done(result, error):
+            if error or not result or (not result[0] and not result[1]):
+                self._error_label.configure(
+                    text="No git config found — run: git config --global user.name / user.email"
+                )
+                return
+
+            git_name, git_email = result
+            self._error_label.configure(text="")
+            self._git_name_entry.delete(0, "end")
+            self._git_email_entry.delete(0, "end")
+            if git_name:
+                self._git_name_entry.insert(0, git_name)
+            if git_email:
+                self._git_email_entry.insert(0, git_email)
+
+            # Brief visual confirmation on the button
+            self._autofill_btn.configure(text="Filled!")
+            self.after(1500, lambda: self._autofill_btn.configure(text="Fill from current git config"))
+
+        run_async(self, task, done, busy=busy)
 
     def _on_save(self):
         name = self._name_entry.get().strip()

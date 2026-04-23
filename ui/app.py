@@ -9,6 +9,7 @@ from core.git_manager import GitManager
 from core.github_desktop import GitHubDesktopManager
 from core.switcher import ProfileSwitcher, SwitchStep
 from ui.about_dialog import AboutDialog
+from ui.async_utils import ButtonBusy, run_async
 from ui.profile_card import ProfileCard
 from ui.profile_dialog import ProfileDialog
 from ui.settings_dialog import SettingsDialog
@@ -232,7 +233,24 @@ class GitSwitcherApp(ctk.CTk):
     # ── Refresh ───────────────────────────────────────────────────
 
     def _refresh(self):
-        git_name, git_email = self._git.get_current_user()
+        """Refresh the UI. The only potentially slow part is reading the
+        current git user (a subprocess call), so we run that on a worker
+        thread and rebuild the profile list when it returns."""
+        busy = ButtonBusy(self._refresh_btn, "Refreshing")
+
+        def task():
+            return self._git.get_current_user()
+
+        def done(result, error):
+            if error or result is None:
+                git_name, git_email = "", ""
+            else:
+                git_name, git_email = result
+            self._apply_refresh(git_name, git_email)
+
+        run_async(self, task, done, busy=busy)
+
+    def _apply_refresh(self, git_name: str, git_email: str):
         self._current_profile = self._config.find_profile_by_git(git_name, git_email)
 
         if git_name or git_email:
@@ -279,6 +297,13 @@ class GitSwitcherApp(ctk.CTk):
         self._set_status(f"Switching to '{profile_name}'...", "gray")
         self._set_controls_enabled(False)
 
+        # Animate a spinner on the clicked Switch button.
+        card = self._cards.get(profile_name)
+        switch_btn = card.switch_button if card else None
+        busy = ButtonBusy(switch_btn, "Switching") if switch_btn else None
+        if busy:
+            busy.start()
+
         def worker():
             def on_progress(step: SwitchStep, detail: str):
                 msg = f"{step.value} {detail}".strip()
@@ -289,6 +314,8 @@ class GitSwitcherApp(ctk.CTk):
             )
 
             def on_done():
+                if busy:
+                    busy.stop()
                 color = ("#2d7a4a", "#4caf7d") if result.success else ("#c0392b", "#e05555")
                 self._set_status(result.message, color)
                 self._set_controls_enabled(True)

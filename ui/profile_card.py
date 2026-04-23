@@ -150,3 +150,10 @@ class ProfileCard(ctk.CTkFrame):
             self._edit_btn.configure(state=state)
         if self._delete_btn:
             self._delete_btn.configure(state=state)
+
+    @property
+    def switch_button(self):
+        """Expose the Switch button so callers can animate a busy spinner
+        on it without reaching into private attributes."""
+        return self._switch_btn
+

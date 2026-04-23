@@ -12,6 +12,7 @@ from core.updater import (
     is_frozen,
     is_newer,
 )
+from ui.async_utils import ButtonBusy, TextSpinner
 from version import __version__
 
 
@@ -29,6 +30,8 @@ class UpdateDialog(ctk.CTkToplevel):
 
         self.grid_columnconfigure(0, weight=1)
         self._build()
+        self._status_spinner = TextSpinner(self._status_label)
+        self._progress_spinner = TextSpinner(self._progress_label)
         self.bind("<Escape>", lambda _e: self._safe_close())
 
         # Auto-check as soon as the dialog is visible
@@ -139,10 +142,8 @@ class UpdateDialog(ctk.CTkToplevel):
         self._check_btn.configure(state="disabled")
         self._download_btn.configure(state="disabled")
         self._notes_box.grid_remove()
-        self._status_label.configure(
-            text="Checking for updates...",
-            text_color=("gray40", "gray60"),
-        )
+        self._status_label.configure(text_color=("gray40", "gray60"))
+        self._status_spinner.start("Checking for updates...")
 
         def worker():
             release, error = fetch_latest_release()
@@ -151,6 +152,7 @@ class UpdateDialog(ctk.CTkToplevel):
         threading.Thread(target=worker, daemon=True).start()
 
     def _on_check_done(self, release: ReleaseInfo | None, error: str | None):
+        self._status_spinner.stop()
         self._check_btn.configure(state="normal")
 
         if error:
@@ -196,7 +198,8 @@ class UpdateDialog(ctk.CTkToplevel):
         if not self._release:
             return
 
-        self._download_btn.configure(state="disabled")
+        self._download_busy = ButtonBusy(self._download_btn, "Downloading")
+        self._download_busy.start()
         self._check_btn.configure(state="disabled")
         self._close_btn.configure(state="disabled")
         self._progress.set(0)
@@ -234,6 +237,9 @@ class UpdateDialog(ctk.CTkToplevel):
     def _on_download_done(self, path, error):
         self._progress.stop()
         self._progress.configure(mode="determinate")
+        # Stop the Download button's busy animation — we may re-enable it on error.
+        if hasattr(self, "_download_busy"):
+            self._download_busy.stop()
 
         if error:
             self._progress.grid_remove()
@@ -246,11 +252,12 @@ class UpdateDialog(ctk.CTkToplevel):
             return
 
         self._progress.set(1)
-        self._progress_label.configure(text="Download complete. Applying update...")
+        self._progress_spinner.start("Download complete. Applying update...")
 
         try:
             apply_update(path)
         except Exception as exc:
+            self._progress_spinner.stop()
             self._progress_label.configure(
                 text=f"Apply failed: {exc}",
                 text_color=("#c0392b", "#e05555"),
@@ -261,6 +268,7 @@ class UpdateDialog(ctk.CTkToplevel):
         # Update applied — exit so the updater helper can replace the exe.
         # We close Tk cleanly; the helper uses OpenProcess() to detect exit,
         # so it will proceed as soon as this process is gone.
+        self._progress_spinner.stop()
         self._progress_label.configure(
             text="Update ready. Restarting...",
             text_color=("#2d7a4a", "#4caf7d"),
