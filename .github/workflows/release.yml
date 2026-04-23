@@ -1,0 +1,72 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+
+permissions:
+  contents: write   # needed to create GitHub Releases
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          cache: 'pip'
+
+      # ── Derive version strings ───────────────────────────────────
+      - name: Extract version
+        id: ver
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"          # e.g. v1.2.3
+          $ver = $tag -replace '^v', ''             # e.g. 1.2.3
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "ver=$ver" >> $env:GITHUB_OUTPUT
+          Write-Host "tag=$tag  ver=$ver"
+
+      # ── Stamp version into source before building ─────────────────
+      - name: Patch version.py
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.ver.outputs.ver }}"
+          (Get-Content version.py) `
+            -replace '__version__ = ".*"', "__version__ = `"$ver`"" |
+            Set-Content version.py
+          Get-Content version.py
+
+      # ── Dependencies ─────────────────────────────────────────────
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ── Build ─────────────────────────────────────────────────────
+      - name: Build with PyInstaller
+        run: pyinstaller build.spec --noconfirm
+
+      # ── Package ───────────────────────────────────────────────────
+      - name: Rename executable
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.ver.outputs.tag }}"
+          Rename-Item dist\GitSwitcher.exe "GitSwitcher-$tag.exe"
+          Write-Host "Artifact: dist\GitSwitcher-$tag.exe"
+
+      # ── Release ───────────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Git Profile Switcher ${{ steps.ver.outputs.tag }}"
+          tag_name: ${{ github.ref_name }}
+          files: dist/GitSwitcher-${{ steps.ver.outputs.tag }}.exe
+          generate_release_notes: true
+          draft: false
+          # Tags containing a hyphen (e.g. v1.0.0-beta.1) are pre-releases
+          prerelease: ${{ contains(github.ref_name, '-') }}

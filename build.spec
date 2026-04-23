@@ -2,8 +2,12 @@
 #
 # Build with:  pyinstaller build.spec
 #
+import sys
 from pathlib import Path
-from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
+from PyInstaller.utils.hooks import collect_data_files
+
+sys.path.insert(0, str(Path(".").resolve()))
+from version import __version__
 
 block_cipher = None
 
@@ -51,7 +55,7 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,          # No black console window
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

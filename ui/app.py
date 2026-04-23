@@ -13,6 +13,7 @@ from ui.profile_card import ProfileCard
 from ui.profile_dialog import ProfileDialog
 from ui.settings_dialog import SettingsDialog
 from utils.paths import get_asset
+from version import __version__
 
 
 class GitSwitcherApp(ctk.CTk):
@@ -36,7 +37,7 @@ class GitSwitcherApp(ctk.CTk):
     # ── Window setup ──────────────────────────────────────────────
 
     def _setup_window(self):
-        self.title("Git Profile Switcher")
+        self.title(f"Git Profile Switcher  v{__version__}")
         self.geometry(f"{self._WIDTH}x{self._HEIGHT}")
         self.minsize(420, 500)
         self.grid_columnconfigure(0, weight=1)

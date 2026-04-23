@@ -2,6 +2,7 @@ import customtkinter as ctk
 from PIL import Image
 
 from utils.paths import get_asset, get_app_config_file, get_appdata_roaming
+from version import __version__
 
 
 # ── Reusable section primitives ───────────────────────────────────────────────
@@ -228,13 +229,24 @@ class AboutDialog(ctk.CTkToplevel):
             anchor="w",
         ).grid(row=0, column=1, sticky="sw", padx=(0, 20), pady=(14, 1))
 
+        subtitle_frame = ctk.CTkFrame(frame, fg_color="transparent")
+        subtitle_frame.grid(row=1, column=1, sticky="nw", padx=(0, 20), pady=(0, 14))
+
         ctk.CTkLabel(
-            frame,
+            subtitle_frame,
             text="Getting Started Guide",
             font=ctk.CTkFont(size=12),
             text_color=("gray45", "gray60"),
             anchor="w",
-        ).grid(row=1, column=1, sticky="nw", padx=(0, 20), pady=(0, 14))
+        ).pack(side="left")
+
+        ctk.CTkLabel(
+            subtitle_frame,
+            text=f"  v{__version__}",
+            font=ctk.CTkFont(size=11),
+            text_color=("#1a5fa8", "#4a9eff"),
+            anchor="w",
+        ).pack(side="left")
 
     # ── Scrollable content ────────────────────────────────────────
 
