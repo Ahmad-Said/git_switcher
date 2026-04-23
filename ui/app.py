@@ -12,6 +12,7 @@ from ui.about_dialog import AboutDialog
 from ui.profile_card import ProfileCard
 from ui.profile_dialog import ProfileDialog
 from ui.settings_dialog import SettingsDialog
+from ui.update_dialog import UpdateDialog
 from utils.paths import get_asset
 from version import __version__
 
@@ -33,6 +34,8 @@ class GitSwitcherApp(ctk.CTk):
         self._setup_window()
         self._build_ui()
         self._refresh()
+        # Silent update check after the window is fully drawn
+        self.after(2000, self._background_update_check)
 
     # ── Window setup ──────────────────────────────────────────────
 
@@ -146,6 +149,20 @@ class GitSwitcherApp(ctk.CTk):
             command=self._on_settings,
         )
         self._settings_btn.pack(side="left", padx=(0, 6))
+
+        self._update_btn = ctk.CTkButton(
+            btn_right,
+            text="↓ Updates",
+            width=90,
+            height=32,
+            fg_color="transparent",
+            border_width=1,
+            border_color=("gray55", "gray45"),
+            text_color=("gray15", "gray85"),
+            hover_color=("gray82", "gray28"),
+            command=self._on_updates,
+        )
+        self._update_btn.pack(side="left", padx=(0, 6))
 
         self._about_btn = ctk.CTkButton(
             btn_right,
@@ -292,6 +309,32 @@ class GitSwitcherApp(ctk.CTk):
         dialog = AboutDialog(self)
         self.wait_window(dialog)
 
+    def _on_updates(self):
+        dialog = UpdateDialog(self)
+        self.wait_window(dialog)
+
+    def _background_update_check(self):
+        """Check for a newer release silently; highlight the button if found."""
+        import threading
+        from core.updater import fetch_latest_release, is_newer
+
+        def worker():
+            release, error = fetch_latest_release()
+            if release and is_newer(release) and not error:
+                self.after(0, lambda: self._mark_update_available(release.tag))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _mark_update_available(self, tag: str):
+        self._update_btn.configure(
+            text=f"↓ {tag}",
+            fg_color=("#1a5fa8", "#1a4a8a"),
+            text_color="white",
+            border_width=0,
+            hover_color=("#1550a0", "#2060b0"),
+        )
+        self._set_status(f"Update {tag} available — click '↓ {tag}' to install", ("#1a5fa8", "#4a9eff"))
+
     # ── Helpers ───────────────────────────────────────────────────
 
     def _set_status(self, message: str, color="gray"):
@@ -302,6 +345,7 @@ class GitSwitcherApp(ctk.CTk):
         self._add_btn.configure(state=state)
         self._refresh_btn.configure(state=state)
         self._settings_btn.configure(state=state)
+        self._update_btn.configure(state=state)
         self._about_btn.configure(state=state)
         for card in self._cards.values():
             card.set_enabled(enabled)
