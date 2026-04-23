@@ -1,3 +1,4 @@
+import os
 import sys
 import threading
 
@@ -262,7 +263,10 @@ class UpdateDialog(ctk.CTkToplevel):
             text="Update ready. Restarting...",
             text_color=("#2d7a4a", "#4caf7d"),
         )
-        self.after(1200, lambda: sys.exit(0))
+        # os._exit() is required here — sys.exit() raises SystemExit which
+        # tkinter's event loop swallows, leaving the process alive and the
+        # waiting batch script stuck. os._exit() kills the process immediately.
+        self.after(1200, lambda: os._exit(0))
 
     # ── Close ─────────────────────────────────────────────────────
 
