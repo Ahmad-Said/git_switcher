@@ -47,7 +47,11 @@ class ProfileDialog(ctk.CTkToplevel):
 
         ctk.CTkButton(
             btn_frame, text="Cancel", width=110, height=34,
-            fg_color="transparent", border_width=1, command=self.destroy,
+            fg_color="transparent", border_width=1,
+            border_color=("gray55", "gray45"),
+            text_color=("gray15", "gray85"),
+            hover_color=("gray82", "gray28"),
+            command=self.destroy,
         ).pack(side="left", padx=6)
 
         ctk.CTkButton(

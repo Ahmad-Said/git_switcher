@@ -123,6 +123,9 @@ class GitSwitcherApp(ctk.CTk):
             height=32,
             fg_color="transparent",
             border_width=1,
+            border_color=("gray55", "gray45"),
+            text_color=("gray15", "gray85"),
+            hover_color=("gray82", "gray28"),
             command=self._refresh,
             font=ctk.CTkFont(size=12),
         )
@@ -135,6 +138,9 @@ class GitSwitcherApp(ctk.CTk):
             height=32,
             fg_color="transparent",
             border_width=1,
+            border_color=("gray55", "gray45"),
+            text_color=("gray15", "gray85"),
+            hover_color=("gray82", "gray28"),
             command=self._on_settings,
         )
         self._settings_btn.pack(side="left")

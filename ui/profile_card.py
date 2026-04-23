@@ -108,6 +108,9 @@ class ProfileCard(ctk.CTkFrame):
             height=28,
             fg_color="transparent",
             border_width=1,
+            border_color=("gray55", "gray45"),
+            text_color=("gray15", "gray85"),
+            hover_color=("gray82", "gray28"),
             command=on_edit,
             font=ctk.CTkFont(size=11),
         )
